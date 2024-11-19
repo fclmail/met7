@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BUY HERE NOW</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@latest/dist/ethers.min.js"></script>
+  <style>
+    body {
+      background-color: #000080; /* Dark blue background */
+      color: #00FF00;           /* Green text */
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    label, select, button {
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+    select, button {
+      padding: 10px;
+      margin: 10px 0;
+    }
+    button {
+      background-color: #00FF00; /* Green button */
+      color: #000080;           /* Dark blue text */
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #32CD32; /* Lighter green on hover */
+    }
+    p {
+      margin-top: 20px;
+      font-size: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>BUY HERE NOW</h1>
+
+  <!-- Dropdown for purchase amount -->
+  <label for="amount">Select Purchase Amount:</label>
+  <select id="amount">
+    <option value="0.001">0.001 USDC</option>
+    <option value="100">100.0 USDC</option>
+    <option value="1000">1000.00 USDC</option>
+  </select>
+  <br><br>
+
+  <!-- Purchase button -->
+  <button id="purchase-button">Purchase Now</button>
+
+  <!-- Status messages -->
+  <p id="status"></p>
+
+  <script>
+    (async () => {
+      const usdcContractAddress = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"; // Polygon USDC contract
+      const recipientAddress = "0x2Ee934331C771F0f5901314226375F469e7CeceC"; // Hardcoded recipient
+      const usdcDecimals = 6; // USDC decimals
+      const chainId = "0x89"; // Polygon Mainnet Chain ID
+
+      if (typeof window.ethereum === "undefined") {
+        document.getElementById("status").textContent = "MetaMask is not installed!";
+        return;
+      }
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const usdcAbi = ["function transfer(address to, uint256 amount) public returns (bool)"];
+      const usdcContract = new ethers.Contract(usdcContractAddress, usdcAbi, signer);
+
+      try {
+        // Connect wallet on page load
+        await ethereum.request({ method: "eth_requestAccounts" });
+        const currentChainId = await ethereum.request({ method: "eth_chainId" });
+        if (currentChainId !== chainId) {
+          document.getElementById("status").textContent = "Please switch to Polygon Mainnet in MetaMask.";
+          return;
+        }
+        document.getElementById("status").textContent = "Wallet connected. Ready to make purchases.";
+      } catch (error) {
+        console.error("Wallet connection error:", error);
+        document.getElementById("status").textContent = "Failed to connect wallet.";
+        return;
+      }
+
+      document.getElementById("purchase-button").addEventListener("click", async () => {
+        const amount = document.getElementById("amount").value;
+        const amountInWei = ethers.utils.parseUnits(amount, usdcDecimals);
+        console.log("Amount selected:", amount);
+
+        try {
+          // Ensure MetaMask is connected and on the correct network
+          await ethereum.request({ method: 'eth_requestAccounts' });
+          const currentChainId = await ethereum.request({ method: "eth_chainId" });
+          if (currentChainId !== chainId) {
+            document.getElementById("status").textContent = "Please switch to Polygon Mainnet in MetaMask.";
+            return;
+          }
+
+          // Execute the transaction
+          const tx = await usdcContract.transfer(recipientAddress, amountInWei);
+          console.log("Transaction sent:", tx);
+          document.getElementById("status").textContent = "Transaction sent. Waiting for confirmation...";
+          const receipt = await tx.wait();
+          document.getElementById("status").textContent = `Transaction successful! Tx Hash: ${tx.hash}`;
+          console.log("Transaction confirmed:", receipt);
+        } catch (error) {
+          console.error("Transaction error:", error);
+          document.getElementById("status").textContent = `Transaction failed: ${error.message}`;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
